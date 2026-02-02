@@ -1,7 +1,6 @@
 package com.porters.cache.config;
 
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.util.Set;
@@ -10,34 +9,34 @@ import java.util.function.Supplier;
 
 public class RedisCacheClient implements CacheClient {
 
-    private final RedisTemplate<String, Object> redis;
+    private final RedisTemplate<String, Object> redisTemplate;
 
-    RedisCacheClient(RedisTemplate<String, Object> redis) {
-        this.redis = redis;
+    RedisCacheClient(RedisTemplate<String, Object> redisTemplate) {
+        this.redisTemplate = redisTemplate;
     }
 
     @Override
     public <T> T get(String key, Class<T> type) {
-        Object value = redis.opsForValue().get(key);
+        Object value = redisTemplate.opsForValue().get(key);
         return value == null ? null : type.cast(value);
     }
 
     @Override
     public void set(String key, Object value, Duration ttl) {
-        redis.opsForValue().set(key, value, ttl.toSeconds(), TimeUnit.SECONDS);
+        redisTemplate.opsForValue().set(key, value, ttl.toSeconds(), TimeUnit.SECONDS);
     }
 
     @Override
     public void delete(String key) {
-        redis.delete(key);
+        redisTemplate.delete(key);
     }
 
     @Override
     public long deleteByPrefix(String prefix) {
-        Set<String> keys = redis.keys(prefix + "*");
+        Set<String> keys = redisTemplate.keys(prefix + "*");
         if (keys == null || keys.isEmpty()) return 0L;
 
-        Long deleted = redis.delete(keys);
+        Long deleted = redisTemplate.delete(keys);
         return deleted == null ? 0L : deleted;
     }
 
