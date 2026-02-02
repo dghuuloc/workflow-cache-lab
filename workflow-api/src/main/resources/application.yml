@@ -1,0 +1,41 @@
+server:
+  port: 9070
+
+spring:
+  application:
+    name: workflow-cache-demo
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/classicmodels?useSSL=false&serverTimezone=UTC
+    username: root
+    password: r2ibvsrs
+
+  data:
+    redis:
+      host: localhost
+      port: 7379
+      password: rootpass
+
+#    redis:
+#      password: rootpass
+#      cluster:
+#        nodes:
+#          - localhost:7011
+#          - localhost:7022
+#          - localhost:7033
+#          - localhost:7044
+#          - localhost:7055
+
+#management:
+#  endpoints:
+#    web:
+#      exposure:
+#        include: health
+#
+#resilience4j:
+#  circuitbreaker:
+#    instances:
+#      redisCB:
+#        slidingWindowSize: 5
+#        failureRateThreshold: 50
+#        waitDurationInOpenState: 10s

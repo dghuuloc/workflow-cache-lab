@@ -1,0 +1,34 @@
+== Cache Facade Specification
+
+=== Understanding Two-Tier Caching
+In many applications, a two-tier caching system can improve performance by providing multiple layers of caching:
+
+- **Primary Cache:** Often implemented using in-memory caches like Ehcache or Caffeine. It is typically fast but may not be as scalable.
+- **Secondary Cache:** Redis can serve as this layer, providing a scalable and persistent cache that can handle larger datasets and complex querying.
+
+Implementing a secondary cache with Redis allows you to offload some of the caching responsibilities from your primary cache, providing additional scalability and redundancy.
+
+=== Enable Caching:
+Add the `@EnableCaching` annotation to your main application class or a dedicated configuration class
+
+[source,java]
+----
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cache.annotation.EnableCaching;
+
+@SpringBootApplication
+@EnableCaching // Enables Spring's caching mechanism
+public class YourApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(YourApplication.class, args);
+    }
+}
+----
+
+=== Create a Service/Facade with Caching:
+Define a service class (which can act as your CacheFacade) and annotate methods with caching annotations like `@Cacheable`, `@CachePut`, or `@CacheEvict`.
+
+1. `@Cacheable`; Skips method execution if the result is already in the cache
+2. `@CachePut`: Forces the method to execute and updates the cache with the result.
+3. `@CacheEvict`: Removes data from the cache when a specific action occurs (e.g., deleting a user).

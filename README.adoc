@@ -1,0 +1,337 @@
+== Workflow Cache Manager
+=== 🛡️ How to protect your API (must-do)
+==== Treat Redis as OPTIONAL (cache-aside)
+
+Redis is NOT source of truth.
+DB is source of truth.
+
+Pattern:
+
+[source,text]
+----
+try Redis
+if fail → DB
+----
+Example (Spring Boot):
+
+[source,java]
+----
+public User getUser(Long id) {
+    String key = "user:" + id;
+    try {
+        User u = (User) redisTemplate.opsForValue().get(key);
+        if (u != null) return u;
+    } catch (Exception e) {
+        log.warn("Redis down, fallback to DB");
+    }
+
+    User fromDb = userRepository.findById(id).orElseThrow();
+
+    try {
+        redisTemplate.opsForValue().set(key, fromDb, 60, TimeUnit.SECONDS);
+    } catch (Exception ignored) {}
+
+    return fromDb;
+}
+----
+✔ Redis fail → DB
+✔ API still returns data
+✔ only slower
+
+==== Set short Redis timeouts
+So Redis does NOT block your API threads.
+[source,yml]
+----
+spring:
+  data:
+    redis:
+      timeout: 2s
+      cluster:
+        nodes:
+          - localhost:7011
+          - localhost:7022
+          - localhost:7033
+          - localhost:7044
+          - localhost:7055
+----
+
+==== Circuit Breaker for Redis
+When Redis is down → stop calling it temporarily.
+Use `Resilience4j`:
+
+[source,java]
+----
+@CircuitBreaker(name = "redisCB", fallbackMethod = "fallbackDb")
+public User getUser(Long id) {
+    return (User) redisTemplate.opsForValue().get("user:"+id);
+}
+
+public User fallbackDb(Long id, Throwable t) {
+    return userRepository.findById(id).orElseThrow();
+}
+----
+
+Effect:
+[source,go]
+----
+Redis down → circuit opens → skip Redis → go DB
+----
+
+==== Local cache (L1) as shield
+Add Caffeine cache:
+[source,text]
+----
+Client → L1 (JVM) → Redis → DB
+----
+
+If Redis dies:
+✔ L1 still serves hot data
+✔ DB not hammered
+
+Spring:
+[source,java]
+----
+@Cacheable(value="user", key="#id")
+public User getUser(Long id) {  }
+----
+
+With:
+
+* L1: Caffeine
+* L2: Redis
+
+==== Cache stampede protection (important)
+
+When Redis dies:
+1000 users → DB → 💥
+
+Protect with lock:
+[source,java]
+----
+String lockKey = "lock:user:" + id;
+Boolean locked = redisTemplate.opsForValue().setIfAbsent(lockKey, "1", 10, TimeUnit.SECONDS);
+
+if (locked) {
+   User u = dbCall();
+   redisTemplate.opsForValue().set(key, u, 60, TimeUnit.SECONDS);
+   return u;
+} else {
+   Thread.sleep(50);
+   return (User) redisTemplate.opsForValue().get(key);
+}
+----
+Only 1 thread hits DB.
+
+==== Redis health check
+
+Expose:
+[source,bash]
+----
+/actuator/health
+----
+
+When Redis DOWN:
+[source,bash]
+----
+status: DOWN
+----
+
+===== 🔥 What NOT to do
+* ❌ Direct Redis call without try/catch
+* ❌ Long Redis timeout
+* ❌ Use Redis as primary DB
+* ❌ No fallback logic
+
+==== Best production architecture
+
+[source,text]
+----
+Client
+  ↓
+Controller
+  ↓
+Service
+  ↓
+L1 Cache (Caffeine)
+  ↓
+Redis Cluster
+  ↓
+Database (fallback)
+----
+
+===== 🏆 Golden rule
+> Cache failure must NEVER break business logic
+
+=== How to monitor Redis
+A cache that you cannot see is a cache you cannot trust.
+To know "is my Redis cache working fine?” you must monitor 3 layers:
+[source,text]
+----
+Application  →  Redis  →  Infrastructure
+----
+
+==== 🧠What does “working fine” mean?
+
+Our cache is healthy if:
+
+* ✅ High cache hit ratio
+* ✅ Low Redis latency
+* ✅ No connection errors
+* ✅ TTL behaving correctly
+* ✅ DB load decreases
+* ✅ Redis memory stable
+
+=== 🔎 Monitor from Redis side (core metrics)
+[source,bash]
+----
+redis-cli -a rootpass INFO stats
+----
+look at:
+[source,shell,subs="verbatim,attributes"]
+----
+keyspace_hits: 1200
+keyspace_misses: 300
+----
+Hit ratio:
+[source,ini]
+----
+hit_rate = hits / (hits + misses)
+----
+> 70% -> Good
+< 30% -> Bad
+
+Latency
+
+[source,bash]
+----
+redis-cli -a rootpass --latency
+----
+< 2ms -> Good
+> 10ms -> Bad
+
+Memory usage
+[source,bash]
+----
+redis-cli -a rootpass INFO memory
+----
+look at:
+[source,shell,subs="verbatim,attributes"]
+----
+used_memory
+maxmemory
+evicted_keys
+----
+If:
+evicted_keys > 0 → Redis is under pressure
+
+
+==== RedisInsight (GUI)
+Use it to:
+
+* See keys
+* See TTL
+* See memory per key
+* See slowlog
+* Monitor commands
+
+Check:
+
+* Keys count growing?
+* TTL decreasing?
+* Lock keys not stuck?
+* Expired keys disappearing?
+
+==== Metrics with Prometheus + Grafana (BEST PRACTICE)
+===== Step 1: Redis Exporter
+===== Step 2: Prometheus
+`prometheus.yml`
+[source,yml]
+----
+scrape_configs:
+  - job_name: redis
+    static_configs:
+      - targets: ['redis-exporter:9121']
+----
+===== Step 3: Grafana Dashboard
+
+==== Monitor from Application side
+Spring Boot Actuator:
+[source,yml]
+----
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics
+----
+Check Redis health:
+[source,bash]
+----
+/actuator/health
+----
+Check Redis:
+[source,json]
+----
+"redis": { "status": "DOWN" }
+----
+
+===== Cache stats (Caffeine)
+[source,java]
+----
+@Bean
+public CacheManager cacheManager() {
+    CaffeineCacheManager cm = new CaffeineCacheManager("userCache");
+    cm.setCaffeine(Caffeine.newBuilder().recordStats());
+    return cm;
+}
+----
+Check stats:
+[source,bash]
+----
+/actuator/metrics/cache.gets
+/actuator/metrics/cache.puts
+----
+Check logs:
+
+* First call: DB
+* Second call: Redis
+
+Then kill Redis:
+[source,bash]
+----
+docker stop redis-cluster-1
+----
+call again:
+[source,bash]
+----
+GET /users/1
+----
+Expected:
+
+* Still returns data
+* Slower
+* Log: “fallback to DB”
+
+That means:
+
+* protection works
+* cache optional
+* system safe
+
+===== 🚨 Alerts you SHOULD set
+Alert if:
+
+* Redis down
+* hit rate < 50%
+* latency > 10ms
+* evicted_keys > 0
+* DB QPS spikes
+* Redis memory > 80%
+
+==== Other common TTL values
+
+* TTL	Code
+* 30 seconds	Duration.ofSeconds(30)
+* 5 minutes	Duration.ofMinutes(5)
+* 1 hour	Duration.ofHours(1)
+* 1 day	Duration.ofDays(1)

@@ -1,0 +1,31 @@
+services:
+  redis-cluster-1:
+    image: redis:8
+    command: redis-server --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --appendonly yes --requirepass rootpass
+    ports:
+      - "7011:6379"
+
+  redis-cluster-2:
+    image: redis:8
+    command: redis-server --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --appendonly yes --requirepass rootpass
+    ports:
+      - "7022:6379"
+
+  redis-cluster-3:
+    image: redis:8
+    command: redis-server --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --appendonly yes --requirepass rootpass
+    ports:
+      - "7033:6379"
+
+  redis-cluser-4:
+    image: redis:8
+    command: redis-server --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --appendonly yes --appendonly yes --requirepass rootpass
+    ports:
+      - "7044:6379"
+
+  redis-cluster-5:
+    image: redis:8
+    command: redis-server --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --appendonly yes --requirepass rootpass
+    ports:
+      - "7055:6379"
+
