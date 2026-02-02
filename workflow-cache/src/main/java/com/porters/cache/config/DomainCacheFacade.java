@@ -17,11 +17,15 @@ public class DomainCacheFacade {
         return cacheClient.getOrLoad(cacheKeyStrategy.list(domain), type, ttl, loader);
     }
 
-    public void invalidateOne(String domain, Object id) {
-        cacheClient.delete(cacheKeyStrategy.byId(domain, id));
+    public <T> T getById(String domain, Object id, Class<T> type, Duration ttl, Supplier<T> loader) {
+        return cacheClient.getOrLoad(cacheKeyStrategy.byId(domain, id), type, ttl, loader);
     }
 
-    public long invalidateDomain(String domain) {
-        return cacheClient.deleteByPrefix(cacheKeyStrategy.prefix(domain));
+    public void invalidateDomain(String domain) {
+        cacheClient.deleteByPrefix(cacheKeyStrategy.prefix(domain));
+    }
+
+    public void invalidateOne(String domain, Object id) {
+        cacheClient.delete(cacheKeyStrategy.byId(domain, id));
     }
 }

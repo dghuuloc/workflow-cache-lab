@@ -24,12 +24,7 @@ public class RedisCacheClient implements CacheClient {
 
     @Override
     public void set(String key, Object value, Duration ttl) {
-        redis.opsForValue().set(
-                key,
-                value,
-                ttl.toSeconds(),
-                TimeUnit.SECONDS
-        );
+        redis.opsForValue().set(key, value, ttl.toSeconds(), TimeUnit.SECONDS);
     }
 
     @Override
@@ -47,11 +42,7 @@ public class RedisCacheClient implements CacheClient {
     }
 
     @Override
-    public <T> T getOrLoad(String key,
-                           Class<T> type,
-                           Duration ttl,
-                           Supplier<T> loader) {
-
+    public <T> T getOrLoad(String key, Class<T> type, Duration ttl, Supplier<T> loader) {
         T cached = get(key, type);
         if (cached != null) {
             return cached;

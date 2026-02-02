@@ -15,11 +15,7 @@ public class CacheAsyncService {
         this.cache = cache;
     }
 
-    public <T> T getOrAsyncLoad(String key,
-                                Class<T> type,
-                                Duration ttl,
-                                Supplier<T> loader) {
-
+    public <T> T getOrAsyncLoad(String key, Class<T> type, Duration ttl, Supplier<T> loader) {
         T cached = cache.get(key, type);
         if (cached != null) {
             return cached;

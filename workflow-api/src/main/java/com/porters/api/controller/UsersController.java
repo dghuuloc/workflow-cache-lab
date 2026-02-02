@@ -16,7 +16,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("api/users")
-public class UserXmlController {
+public class UsersController {
 
     private final DomainCacheFacade domainCache;
     private final CacheKeyStrategy keys;
@@ -24,7 +24,7 @@ public class UserXmlController {
     private final UserXmlService xml;
     private final XmlToJsonConverter converter;
 
-    public UserXmlController(DomainCacheFacade domainCache,
+    public UsersController(DomainCacheFacade domainCache,
                            CacheKeyStrategy keys,
                            CacheAsyncService async,
                            UserXmlService xml,

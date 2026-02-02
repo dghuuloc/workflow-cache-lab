@@ -19,14 +19,16 @@ public class CacheConfiguration {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(cf);
 
+        StringRedisSerializer keySer = new StringRedisSerializer();
+        GenericJackson2JsonRedisSerializer valSer = new GenericJackson2JsonRedisSerializer();
+
         // Key serializers
-        template.setKeySerializer(new StringRedisSerializer());
-        template.setHashKeySerializer(new StringRedisSerializer());
+        template.setKeySerializer(keySer);
+        template.setHashKeySerializer(keySer);
 
         // Value serializers
-        GenericJackson2JsonRedisSerializer json = new GenericJackson2JsonRedisSerializer();
-        template.setValueSerializer(json);
-        template.setHashValueSerializer(json);
+        template.setValueSerializer(valSer);
+        template.setHashValueSerializer(valSer);
 
         template.afterPropertiesSet();
         return template;
