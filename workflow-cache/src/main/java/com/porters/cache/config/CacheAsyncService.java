@@ -7,7 +7,6 @@ import java.util.concurrent.Executors;
 import java.util.function.Supplier;
 
 public class CacheAsyncService {
-
     private final CacheClient cache;
     private final Executor executor = Executors.newFixedThreadPool(4);
 

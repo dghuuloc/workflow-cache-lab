@@ -1,5 +1,7 @@
 package com.porters.cache.config;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.porters.cache.metrics.CacheMetrics;
 import org.springframework.data.redis.core.RedisTemplate;
 
 import java.time.Duration;
@@ -8,22 +10,37 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 public class RedisCacheClient implements CacheClient {
+    private final RedisTemplate<String, JsonNode> redisTemplate;
+    private final CacheMetrics cacheMetrics;
 
-    private final RedisTemplate<String, Object> redisTemplate;
-
-    RedisCacheClient(RedisTemplate<String, Object> redisTemplate) {
+    RedisCacheClient(RedisTemplate<String, JsonNode> redisTemplate, CacheMetrics cacheMetrics) {
         this.redisTemplate = redisTemplate;
+        this.cacheMetrics = cacheMetrics;
     }
-
     @Override
     public <T> T get(String key, Class<T> type) {
-        Object value = redisTemplate.opsForValue().get(key);
-        return value == null ? null : type.cast(value);
+        JsonNode value = redisTemplate.opsForValue().get(key);
+        if (value == null) {
+            return null;
+        }
+
+        // This CacheClient is specifically for JsonNode values
+        if (!type.isAssignableFrom(JsonNode.class)) {
+            throw new IllegalArgumentException(
+                    "This cache stores JsonNode only. Requested type: " + type.getName()
+            );
+        }
+        return type.cast(value);
     }
 
     @Override
     public void set(String key, Object value, Duration ttl) {
-        redisTemplate.opsForValue().set(key, value, ttl.toSeconds(), TimeUnit.SECONDS);
+        if (!(value instanceof JsonNode)) {
+            throw new IllegalArgumentException(
+                    "This cache stores JsonNode only. Got: " + value.getClass().getName()
+            );
+        }
+        redisTemplate.opsForValue().set(key, (JsonNode) value, ttl.toSeconds(), TimeUnit.SECONDS);
     }
 
     @Override
@@ -44,9 +61,11 @@ public class RedisCacheClient implements CacheClient {
     public <T> T getOrLoad(String key, Class<T> type, Duration ttl, Supplier<T> loader) {
         T cached = get(key, type);
         if (cached != null) {
+            cacheMetrics.hit();
             return cached;
         }
 
+        cacheMetrics.miss();
         T value = loader.get();
         set(key, value, ttl);
         return value;

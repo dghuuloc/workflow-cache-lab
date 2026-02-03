@@ -1,10 +1,13 @@
 package com.porters.cache.config;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.porters.cache.metrics.CacheMetrics;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 @Configuration
@@ -15,20 +18,24 @@ public class CacheConfiguration {
      * If you already have another RedisTemplate bean, keep only one.
      */
     @Bean
-    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory cf) {
-        RedisTemplate<String, Object> template = new RedisTemplate<>();
+    public RedisTemplate<String, JsonNode> redisTemplate(
+            RedisConnectionFactory cf,
+            ObjectMapper objectMapper
+    ) {
+        RedisTemplate<String, JsonNode> template = new RedisTemplate<>();
         template.setConnectionFactory(cf);
 
+        // Key serializer
         StringRedisSerializer keySer = new StringRedisSerializer();
-        GenericJackson2JsonRedisSerializer valSer = new GenericJackson2JsonRedisSerializer();
-
-        // Key serializers
         template.setKeySerializer(keySer);
         template.setHashKeySerializer(keySer);
 
-        // Value serializers
-        template.setValueSerializer(valSer);
-        template.setHashValueSerializer(valSer);
+        // Value serializer (typed -> no @class needed)
+        Jackson2JsonRedisSerializer<JsonNode> jsonSer =
+                new Jackson2JsonRedisSerializer<>(objectMapper, JsonNode.class);
+
+        template.setValueSerializer(jsonSer);
+        template.setHashValueSerializer(jsonSer);
 
         template.afterPropertiesSet();
         return template;
@@ -62,8 +69,8 @@ public class CacheConfiguration {
      * Low-level cache client using Redis.
      */
     @Bean
-    public CacheClient cacheClient(RedisTemplate<String, Object> redisTemplate) {
-        return new RedisCacheClient(redisTemplate);
+    public CacheClient cacheClient(RedisTemplate<String, JsonNode> redisTemplate, CacheMetrics cacheMetrics) {
+        return new RedisCacheClient(redisTemplate, cacheMetrics);
     }
 
     /**

@@ -22,4 +22,9 @@ public class CacheAdminImpl implements CacheAdmin {
     public long invalidateDomain(String domain) {
         return cache.deleteByPrefix(keys.prefix(domain));
     }
+
+    @Override public long invalidateAll() {
+        // delete everything for this version: v1:*
+        return cache.deleteByPrefix(CacheDefaults.CACHE_VERSION + ":");
+    }
 }

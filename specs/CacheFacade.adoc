@@ -32,3 +32,64 @@ Define a service class (which can act as your CacheFacade) and annotate methods 
 1. `@Cacheable`; Skips method execution if the result is already in the cache
 2. `@CachePut`: Forces the method to execute and updates the cache with the result.
 3. `@CacheEvict`: Removes data from the cache when a specific action occurs (e.g., deleting a user).
+
+=== How to check hit/miss when calling API
+==== Step A -- call your endpoint twice
+1. First call (MISS, will load xml and store to Redis)
+[source,bash]
+----
+GET http://localhost:9070/api/users
+----
+
+2. Second call (HIT, will load from Redis)
+[source,bash]
+----
+GET http://localhost:9070/api/users
+----
+
+==== Step B -- check metrics in browser/postman
+**Check hit counter:**
+[source,bash]
+----
+GET http://localhost:8080/actuator/metrics/workflow.cache.hit
+----
+
+**Check miss counter:**
+[source,bash]
+----
+GET http://localhost:9070/actuator/metrics/workflow.cache.miss
+----
+
+You'll see the hit counter incremented on the second call, while the miss counter increments on the first call.
+[source,json]
+----
+{
+  "name": "workflow.cache.hit",
+  "measurements": [{ "statistic": "COUNT", "value": 1.0 }]
+}
+----
+
+=== Admin controller (Postman-ready)
+**A) Warm cache (store data)**
+[source,bash]
+----
+GET http://localhost:9070/api/users
+----
+
+**B) Clean all cache**
+[source,bash]
+----
+DELETE http://localhost:9070/api/admin/cache
+----
+
+**C) Clean only `users` domain**
+[source,bash]
+----
+DELETE http://localhost:9070/api/admin/cache/users
+----
+
+**D) Clean one by id (if you cache by id)**
+[source,bash]
+----
+DELETE http://localhost:9070/api/admin/cache/users/123
+----

@@ -6,8 +6,10 @@ spring:
     name: workflow-cache-demo
 
   datasource:
+#    url: jdbc:mysql://localhost:7707/classicmodels?useSSL=false&serverTimezone=UTC
     url: jdbc:mysql://localhost:3306/classicmodels?useSSL=false&serverTimezone=UTC
     username: root
+#    password: rootpassdb
     password: r2ibvsrs
 
   data:
@@ -15,6 +17,12 @@ spring:
       host: localhost
       port: 7379
       password: rootpass
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
 
 #    redis:
 #      password: rootpass

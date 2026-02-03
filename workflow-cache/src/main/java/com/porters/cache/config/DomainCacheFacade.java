@@ -4,7 +4,6 @@ import java.time.Duration;
 import java.util.function.Supplier;
 
 public class DomainCacheFacade {
-
     private final CacheClient cacheClient;
     private final CacheKeyStrategy cacheKeyStrategy;
 
