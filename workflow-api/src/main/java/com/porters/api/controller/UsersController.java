@@ -3,10 +3,7 @@ package com.porters.api.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.porters.api.service.UserXmlService;
 import com.porters.api.service.XmlToJsonConverter;
-import com.porters.cache.config.CacheAsyncService;
-import com.porters.cache.config.CacheDefaults;
-import com.porters.cache.config.CacheKeyStrategy;
-import com.porters.cache.config.DomainCacheFacade;
+import com.porters.cache.config.*;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -39,7 +36,7 @@ public class UsersController {
     // sync cache (MISS -> load xml -> convert -> store)
     @GetMapping
     public JsonNode users() {
-        return domainCache.getList("users", JsonNode.class, CacheDefaults.DEFAULT_TTL,
+        return domainCache.getList("users", JsonNode.class, CacheConfiguration.DEFAULT_TTL,
                 () -> converter.convert(xml.loadXml()));
     }
 
@@ -47,7 +44,7 @@ public class UsersController {
     @GetMapping("/async")
     public Object usersAsync() {
         String key = keys.list("users");
-        JsonNode result = async.getOrAsyncLoad(key, JsonNode.class, CacheDefaults.DEFAULT_TTL,
+        JsonNode result = async.getOrAsyncLoad(key, JsonNode.class, CacheConfiguration.DEFAULT_TTL,
                 () -> converter.convert(xml.loadXml()));
         return result != null ? result : Map.of("status", "LOADING");
     }

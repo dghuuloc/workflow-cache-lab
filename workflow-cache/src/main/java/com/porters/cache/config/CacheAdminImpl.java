@@ -25,6 +25,6 @@ public class CacheAdminImpl implements CacheAdmin {
 
     @Override public long invalidateAll() {
         // delete everything for this version: v1:*
-        return cache.deleteByPrefix(CacheDefaults.CACHE_VERSION + ":");
+        return cache.deleteByPrefix(CacheConfiguration.CACHE_VERSION + ":");
     }
 }

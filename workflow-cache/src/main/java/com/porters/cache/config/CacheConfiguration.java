@@ -10,9 +10,13 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
+import java.time.Duration;
+
 @Configuration
 public class CacheConfiguration {
 
+    public static final String CACHE_VERSION = "v1";
+    public static final Duration DEFAULT_TTL = Duration.ofMinutes(5);
     /**
      * Provide a RedisTemplate with JSON serialization.
      * If you already have another RedisTemplate bean, keep only one.
@@ -50,17 +54,17 @@ public class CacheConfiguration {
 
             @Override
             public String list(String domain) {
-                return CacheDefaults.CACHE_VERSION + ":" + domain + ":list";
+                return CACHE_VERSION + ":" + domain + ":list";
             }
 
             @Override
             public String byId(String domain, Object id) {
-                return CacheDefaults.CACHE_VERSION + ":" + domain + ":byId:" + id;
+                return CACHE_VERSION + ":" + domain + ":byId:" + id;
             }
 
             @Override
             public String prefix(String domain) {
-                return CacheDefaults.CACHE_VERSION + ":" + domain;
+                return CACHE_VERSION + ":" + domain;
             }
         };
     }
